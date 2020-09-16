@@ -1,18 +1,21 @@
 #system
 import rospy
-import os
 
 #data processing
 import numpy as np
 import math
 import struct
-from scipy.spatial.transform import Rotation as R
+
+#vector visualizer
+import rospy
+from geometry_msgs.msg import Pose, PoseArray
+
 
 # point cloud
 from sensor_msgs.msg import PointCloud2, PointField
 from sensor_msgs import point_cloud2
-from std_msgs.msg import Header
 
+from std_msgs.msg import Header
 
 
 
@@ -22,7 +25,8 @@ class liverGrid:
         rospy.init_node('liverGrid', anonymous=True)
 
         # publisher
-        self.pub = rospy.Publisher("liverGrid", PointCloud2, queue_size=2)
+        self.pub1 = rospy.Publisher("liverGrid", PointCloud2, queue_size=2)
+        self.pub2 = rospy.Publisher("liverGridNorm", PoseArray, queue_size=2)
         self.rate = rospy.Rate(10)
 
         # point cloud2
@@ -32,7 +36,11 @@ class liverGrid:
         self.header.frame_id = "PSM1_psm_base_link" # the 3dpcl is in a new frame
         self.pc2 = point_cloud2.create_cloud(self.header, self.fields, self.point_cloud)
         self.point_nparray = np.array([])
+
+        self.normal_vectors = PoseArray()
+        self.normal_vectors.header = self.header
         
+
 
     def convert_array_to_pointcloud2(self, xshift, yshift, zshift):
         """
@@ -40,7 +48,7 @@ class liverGrid:
         return: pointcloud2
         """
         for i in range(self.point_nparray.shape[0]):
-            color = np.int(np.floor(i/self.point_nparray.shape[0] * 255))
+            color = np.int(np.floor(np.float(i)/self.point_nparray.shape[0] * 255))
             rgb = self.compressRGBA(color, color, color)
             self.point_cloud.append([self.point_nparray[i,0]+xshift, self.point_nparray[i,1]+yshift, self.point_nparray[i,2]+zshift, rgb])
 
@@ -49,7 +57,9 @@ class liverGrid:
     def publish_pointcloud(self):
         while not rospy.is_shutdown():
             self.pc2.header.stamp = rospy.Time.now()
-            self.pub.publish(self.pc2)
+            self.pub1.publish(self.pc2)
+            self.normal_vectors.header.stamp = rospy.Time.now()
+            self.pub2.publish(self.normal_vectors)
             self.rate.sleep()
 
     def compressRGBA(self,r,g,b,a=255):
@@ -62,6 +72,9 @@ class liverGrid:
         return: 4 by 4 numpy array matrix
         """
         radius = degree/180*np.pi
+        print("degree", degree)
+        print("degree/180", degree/180)
+        print(radius)
         rotationX = np.array([[1,0,0,0],
             [0,np.cos(radius),-np.sin(radius),0],
             [0,np.sin(radius),np.cos(radius),0],
@@ -93,25 +106,33 @@ class liverGrid:
         self.point_nparray = np.transpose(self.point_nparray) # 3 by N matrix
         homo = np.ones((1, self.point_nparray.shape[1]))
         self.point_nparray = np.vstack((self.point_nparray, homo))
-        #rotationMatrix = self.getRotationMatrix(rotateAxis, rotateDegree)
-        rotational_matrix = R.from_euler(rotateAxis, rotateDegree, degrees= True).as_dcm()
-        rotational_matrix = np.vstack((rotational_matrix, [0, 0, 1]))
-        rotational_matrix = np.hstack((rotational_matrix,np.array([0, 0, 0, 1]).reshape(4,1)))
-        self.point_nparray = np.dot(rotational_matrix, self.point_nparray).T
-        self.point_nparray = self.point_nparray[:, 0:3]
-        np.save('disorder_liverGrid.npy', self.point_nparray)
-        #print(np.load('disorder_liverGrid.npy'))
-        # self.point_nparray = np.dot(getRotationMatrix(rotateAxis,rotateDegree), )
-def read_npy_file():
-    modeling_directory = os.getcwd()
-    medical_dvrk_ar_directory = os.path.split(modeling_directory)[0]
-    src_directory = os.path.split(medical_dvrk_ar_directory)[0]
-    Medical_ws = os.path.split(src_directory)[0]
-    file_path = os.path.join(Medical_ws,"data/downPCL.npy")
-    return file_path
-if __name__ == '__main__':
-    liver_grid = liverGrid()
-    npy_file = read_npy_file()
-    liver_grid.readArrayfromFile(npy_file, scale=0.0005, rotateAxis='x', rotateDegree=-90)
-    liver_grid.convert_array_to_pointcloud2(xshift=0, yshift=0, zshift=-0.18)
-    liver_grid.publish_pointcloud()
+
+        # rotationMatrix = self.getRotationMatrix(rotateAxis, rotateDegree)
+ 
+        for i in range(self.point_nparray.shape[1]):
+            normal_vector = Pose()
+            normal_vector.position.x = self.point_nparray[0,i]
+            normal_vector.position.y = self.point_nparray[1,i]
+            normal_vector.position.z = self.point_nparray[2,i]-0.185
+            # normal_orientation = euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
+            normal_vector.orientation.x = self.point_nparray[3,i]
+            normal_vector.orientation.y = self.point_nparray[4,i]
+            normal_vector.orientation.z = self.point_nparray[5,i]
+            normal_vector.orientation.w = self.point_nparray[6,i]
+
+            self.normal_vectors.poses.append(normal_vector)
+
+        self.point_nparray = self.point_nparray[0:3,:].T
+
+    def euler_to_quaternion(self, yaw, pitch, roll):
+        qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+        qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+        qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+        qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+        return [qx, qy, qz, qw]
+
+if __name__ == "__main__":
+    liverGrid = liverGrid()
+    liverGrid.readArrayfromFile('/home/cora/medicalRobot/src/Medical-DVRK-AR/Medical-DVRK-AR/data/liverGrid_norm.npy', scale=1, rotateAxis='x', rotateDegree=0)
+    liverGrid.convert_array_to_pointcloud2(xshift=0, yshift=0, zshift=-0.18)
+    liverGrid.publish_pointcloud()
