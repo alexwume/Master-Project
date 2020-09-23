@@ -28,8 +28,8 @@ if __name__ == '__main__':
     position = np.asarray(downpcd.points)
     sparse_posAndNormals_outward = np.concatenate((position, normals_sparse_outward), axis=1)
     sparse_posAndNormals_inward = np.concatenate((position, normals_sparse_inward), axis=1)
-    np.save("../../../data/normals_sparse_outward.npy", normals_sparse_outward)
-    np.save("../../../data/normals_sparse_inward.npy", normals_sparse_inward)
+    np.save("../../../data/normals_sparse_outward.npy", sparse_posAndNormals_outward)
+    np.save("../../../data/normals_sparse_inward.npy", sparse_posAndNormals_inward)
 
     dense_posAndNormals_outward = np.concatenate((np.asarray(pcd.points), dense_normals_outward), axis=1)
     np.save("../../../data/normals_dense_outward.npy", dense_posAndNormals_outward)
