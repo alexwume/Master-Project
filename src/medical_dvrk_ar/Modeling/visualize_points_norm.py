@@ -17,7 +17,8 @@ from sensor_msgs import point_cloud2
 
 from std_msgs.msg import Header
 
-
+# angle convert
+from scipy.spatial.transform import Rotation as R
 
 class liverGrid:
     def __init__(self):
@@ -81,26 +82,24 @@ class liverGrid:
             normal_vector.position.x = self.point_nparray[0,i]
             normal_vector.position.y = self.point_nparray[1,i]
             normal_vector.position.z = self.point_nparray[2,i]
-            # normal_orientation = euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
-
-            quat = self.euler_to_quaternion(self.point_nparray[3,i],self.point_nparray[4,i],self.point_nparray[5,i])
-            normal_vector.orientation.x, normal_vector.orientation.y, normal_vector.orientation.z, normal_vector.orientation.w = quat
+            normal_vector.orientation.x, normal_vector.orientation.y, normal_vector.orientation.z, normal_vector.orientation.w = self.euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
 
             self.normal_vectors.poses.append(normal_vector)
 
         self.point_nparray = self.point_nparray[0:3,:].T
+    
+    def euler_to_quaternion(self, yaw, pitch, roll):
 
-    def euler_to_quaternion(self, roll, pitch, yaw):
         qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
         qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
         qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
         qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+
         return [qx, qy, qz, qw]
 
 if __name__ == "__main__":
 
     liverGrid = liverGrid()
-    a = liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/normals_sparse_outward.npy')
-    print("jajajajajja", a.shape())
+    liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/normals_sparse_outward.npy')
     liverGrid.convert_array_to_pointcloud2()
-    liverGrid.publish_pointcloud()s
+    liverGrid.publish_pointcloud()

@@ -5,7 +5,6 @@ Cora Sept 21, 2020
 """
 import numpy as np
 import open3d as o3d
-print(o3d.__version__)
 
 from scipy.spatial.transform import Rotation as R
 if __name__ == '__main__':
