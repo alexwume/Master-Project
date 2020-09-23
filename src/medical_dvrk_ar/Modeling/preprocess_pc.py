@@ -6,6 +6,8 @@ Cora Sept 21, 2020
 import numpy as np
 import open3d as o3d
 
+print(o3d.__version__)
+
 from scipy.spatial.transform import Rotation as R
 if __name__ == '__main__':
     print("Load a ply point cloud, print it, and render it")
@@ -14,35 +16,35 @@ if __name__ == '__main__':
     print(np.asarray(pcd.points))
     o3d.visualization.draw_geometries([pcd])
 
-    print("Downsample the point cloud with a voxel of 0.05")
+    print("Compute the normal of the point cloud")
+    pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1, max_nn=30))
+    dense_normals_outward = np.asarray(pcd.normals)
+    dense_normals_outward[:,-1] *= -1
+
+    print("Downsample the point cloud with a voxel of 0.02")
     downpcd = pcd.voxel_down_sample(voxel_size=0.02)
 
     print("Recompute the normal of the downsampled point cloud")
     downpcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=1, max_nn=30))
 
     # get the vector point into the liver instead of point out
-    r_euler_outward = np.asarray(downpcd.normals)
-    r_euler_inward = r_euler_outward.copy()
-    r_euler_outward[:,-1] *= -1
-    r_inward = R.from_euler('xyz', r_euler_inward, degrees=False)
-    r_outward = R.from_euler('xyz', r_euler_outward, degrees=False)
+    normals_outward = np.asarray(downpcd.normals)
 
-    # get the reverse vector point into the liver
-    inward_normal_quat = r_inward.as_quat()
-    outward_normal_quat = r_outward.as_quat()
+    normals_inward = normals_outward.copy()
+    normals_outward[:,-1] *= -1
+
     position = np.asarray(downpcd.points)
-    posAndQuat_inward = np.concatenate((position, inward_normal_quat), axis=1)
-    posAndQuat_outward = np.concatenate((position, outward_normal_quat), axis=1)
-    posAndEuler_outward = np.concatenate((position, r_euler_outward), axis=1)
-    posAndEuler_inward = np.concatenate((position, r_euler_inward), axis=1)
-    np.save("../../../data/liverGrid_inward_quat.npy", posAndQuat_inward)
-    np.save("../../../data/liverGrid_outward_quat.npy", posAndQuat_outward)
-    np.save("../../../data/liverGrid_outward_euler.npy", posAndEuler_outward)
-    np.save("../../../data/liverGrid_inward_euler.npy", posAndEuler_inward)
+    posAndNormals_outward = np.concatenate((position, normals_outward), axis=1)
+    posAndNormals_inward = np.concatenate((position, normals_inward), axis=1)
+    np.save("../../../data/liverGrid_outward_normals.npy", posAndNormals_outward)
+    np.save("../../../data/liverGrid_inward_normals.npy", posAndNormals_inward)
 
-    print(np.load("../../../data/liverGrid_outward_euler.npy", allow_pickle=True).shape)
-    print(np.load("../../../data/liverGrid_outward_quat.npy", allow_pickle=True).shape)
+    dense_posAndNormals_outward = np.concatenate((np.asarray(pcd.points), dense_normals_outward), axis=1)
+    np.save("../../../data/liverGrid_dense_outward_normals.npy", dense_posAndNormals_outward)
+
+    print(np.load("../../../data/liverGrid_outward_normals.npy", allow_pickle=True).shape)
+    print(np.load("../../../data/liverGrid_outward_normals.npy", allow_pickle=True).shape)
     o3d.visualization.draw_geometries([downpcd])
-
+    
 
 
