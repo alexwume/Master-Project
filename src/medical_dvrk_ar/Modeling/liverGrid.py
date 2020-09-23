@@ -133,8 +133,9 @@ class liverGrid:
 
 if __name__ == "__main__":
     liverGrid = liverGrid()
-    liverGrid.readArrayfromFile('/home/arti/catkin_dvrk_ws/src/Medical-DVRK-AR/data/liverGrid_norm_sept16.npy', scale=1, rotateAxis='x', rotateDegree=0)    
+    liverGrid.readArrayfromFile('/home/chang/catkin_ws/src/Medical-DVRK-AR/data/liverGrid_outward_normals_cleanForPlanning.npy', scale=1, rotateAxis='x', rotateDegree=0)    
     # liverGrid.readArrayfromFile('/home/arti/catkin_dvrk_ws/src/Medical-DVRK-AR/data/liverGrid_norm.npy', scale=1, rotateAxis='x', rotateDegree=0)    
     
-    liverGrid.convert_array_to_pointcloud2(xshift=0, yshift=0, zshift=-0.18)
+    # the translation from the robot base to liver center is -0.2 (set in json file)
+    liverGrid.convert_array_to_pointcloud2(xshift=0, yshift=0, zshift=-0.2)
     liverGrid.publish_pointcloud()
