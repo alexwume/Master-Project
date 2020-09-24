@@ -17,8 +17,10 @@ from sensor_msgs import point_cloud2
 
 from std_msgs.msg import Header
 
-# angle convert
+# rotation
 from scipy.spatial.transform import Rotation as R
+
+
 
 class liverGrid:
     def __init__(self):
@@ -76,30 +78,76 @@ class liverGrid:
 
         self.point_nparray  = np.load(path) # N by 3 matrix
         self.point_nparray = np.transpose(self.point_nparray) # 3 by N matrix
+        # self.unitTest()
  
         for i in range(self.point_nparray.shape[1]):
             normal_vector = Pose()
             normal_vector.position.x = self.point_nparray[0,i]
             normal_vector.position.y = self.point_nparray[1,i]
             normal_vector.position.z = self.point_nparray[2,i]
-            normal_vector.orientation.x, normal_vector.orientation.y, normal_vector.orientation.z, normal_vector.orientation.w = self.euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
+            # normal_orientation = euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
+            
+            norm_x =-self.point_nparray[3,i]
+            norm_y =-self.point_nparray[4,i]
+            norm_z =-self.point_nparray[5,i]
+            
+            x_euler, z_euler = self.norm2euler(norm_x,norm_y,norm_z)
+            quat_r = R.from_euler('zxy',[x_euler, 0, z_euler],degrees=False) 
+            
+            normal_vector.orientation.x, normal_vector.orientation.y, normal_vector.orientation.z, normal_vector.orientation.w = quat_r.as_quat()
 
             self.normal_vectors.poses.append(normal_vector)
 
         self.point_nparray = self.point_nparray[0:3,:].T
-    
-    def euler_to_quaternion(self, yaw, pitch, roll):
 
-        qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
-        qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
-        qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
-        qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+    def unitTest():
+        self.point_nparray = np.array([
+            [0,0,0.02,0.02,0.01,0.03],
+            [0,0,0.02,0.02,-0.01,0.03],
+            [0,0,0.02,-0.02,-0.01,0.03],
+            [0,0,0.02,-0.02,0.01,0.03],
+            [0,0,0.02,0.02,0.01,-0.03],
+            [0,0,0.02,0.02,-0.01,-0.03],
+            [0,0,0.02,-0.02,-0.01,-0.03],
+            [0,0,0.02,-0.02,0.01,-0.03],
+        ]).T
+    def norm2euler(self, x, y, z):
+        x_euler=0
+        z_euler=0
+        length = np.sqrt(x**2+y**2)
+        if((x>0)and(y>0)and(z>0)):
+            x_euler = np.arctan(y/x)
+            z_euler = -np.arctan(z/length)
+        if((x<0)and(y<0)and(z<0)):
+            x_euler = np.pi+np.arctan(-y/-x)
+            z_euler = np.arctan(z/length)
+        
+        if((x<0)and(y>0)and(z<0)):
+            x_euler = np.pi-np.arctan(y/-x)
+            z_euler = np.arctan(z/length)
+        if((x>0)and(y<0)and(z>0)):
+            x_euler = -np.arctan(-y/x)
+            z_euler = -np.arctan(z/length)
+        
+        if((x>0)and(y>0)and(z<0)):
+            x_euler = np.arctan(y/x)
+            z_euler = -np.arctan(z/length)
+        if((x<0)and(y<0)and(z>0)):
+            x_euler = np.pi+np.arctan(-y/-x)
+            z_euler = np.arctan(z/length)
 
-        return [qx, qy, qz, qw]
+        if((x<0)and(y>0)and(z>0)):
+            x_euler = np.pi/2+np.arctan(-x/y)
+            z_euler = np.arctan(z/length)
+        if((x>0)and(y<0)and(z<0)):
+            x_euler = -np.arctan(-y/x)
+            z_euler = np.arctan(-z/length)
+
+        return x_euler, z_euler
 
 if __name__ == "__main__":
 
     liverGrid = liverGrid()
-    liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/normals_sparse_outward.npy')
+    a = liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/normals_sparse_outward.npy')
     liverGrid.convert_array_to_pointcloud2()
     liverGrid.publish_pointcloud()
