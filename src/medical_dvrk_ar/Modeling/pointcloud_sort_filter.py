@@ -59,11 +59,8 @@ class filter_pointcloud_for_path_planner():
 		"""
 		for point in self.raw_pcl_with_raw_norm:
 			# x,-z, y
-			# angle = np.arccos(np.dot(point[3:],[0,-1,0]))
-			x = point[3]
-			y = point[4]
-			angle = np.arccos(x**2+y**2)
-			if angle >= max_angle_filtering * np.pi / 180:
+			angle = np.arccos(np.dot(point[3:],[0,0,1]))
+			if (angle <= max_angle_filtering * np.pi / 180):
 				self.raw_pcl_with_filtered_norm.append(point)
 		self.raw_pcl_with_filtered_norm = np.array(self.raw_pcl_with_filtered_norm)
 		print("Remaining points:",self.raw_pcl_with_filtered_norm.shape[0])
@@ -101,7 +98,7 @@ class filter_pointcloud_for_path_planner():
 if __name__ == "__main__":
 	raw_data_path = "../../../data/stl2.ply"
 	# parameter to adjust
-	max_angle = 60  # change  the param within [0,90)
+	max_angle = 80  # change  the param within [0,90)
 	file_path = "D:/CMU2020FALL/HapticSurgery/Medical-DVRK-AR/data/"
 	sorted_file_name = "dense_outward_normals_cleanForPlanning.npy"
 
