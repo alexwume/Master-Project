@@ -17,6 +17,7 @@ class filter_pointcloud_for_path_planner():
 		# the initial point cloud read from the ply file, this one does not has norm in its property
 		self.raw_pcl_without_norm = o3d.io.read_point_cloud(path_to_raw_data)
 
+
 		# the point cloud with the normal vector
 		self.raw_pcl_with_raw_norm = []
 
@@ -48,8 +49,10 @@ class filter_pointcloud_for_path_planner():
 		normals_outward = np.asarray(downpcd.normals)
 		# get the np array version of the points
 		position = np.asarray(downpcd.points)
+		np.save('xyz_for_stiffness_est.npy', position)
 		# combine the position and norm
-		self.raw_pcl_with_raw_norm = np.concatenate((position, normals_outward), axis=1)
+
+		return self.raw_pcl_with_raw_norm
 
 
 	def filter_vector_with_angle_threshold(self, max_angle_filtering):
