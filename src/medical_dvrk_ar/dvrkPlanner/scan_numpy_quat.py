@@ -20,7 +20,7 @@ def arm_planner(trajectory):
 
 def main():
 	# liver_points = np.load('/home/arti/catkin_dvrk_ws/src/Medical-DVRK-AR/data/liverGrid_norm_sept16.npy')	
-	liver_points = np.load('fake_quat.npy')	
+	liver_points = np.load('/home/cora/dvrk/src/Medical-DVRK-AR/data/80degree_norm.npy')	
 	print(liver_points.shape)
 	all_points = []
 
