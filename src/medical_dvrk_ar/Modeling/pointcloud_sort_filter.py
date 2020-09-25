@@ -59,7 +59,10 @@ class filter_pointcloud_for_path_planner():
 		"""
 		for point in self.raw_pcl_with_raw_norm:
 			# x,-z, y
-			angle = np.arccos(np.dot(point[3:],[0,-1,0]))
+			# angle = np.arccos(np.dot(point[3:],[0,-1,0]))
+			x = point[3]
+			y = point[4]
+			angle = np.arccos(x**2+y**2)
 			if angle <= max_angle_filtering * np.pi / 180:
 				self.raw_pcl_with_filtered_norm.append(point)
 		self.raw_pcl_with_filtered_norm = np.array(self.raw_pcl_with_filtered_norm)
