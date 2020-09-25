@@ -49,7 +49,12 @@ class filter_pointcloud_for_path_planner():
 		normals_outward = np.asarray(downpcd.normals)
 		# get the np array version of the points
 		position = np.asarray(downpcd.points)
+<<<<<<< HEAD
 		np.save('xyz_for_stiffness_est.npy', position)
+=======
+		# this is for the robot frame, the z will shift by 0.2
+		position[2,:] -=0.2
+>>>>>>> 2337bdb9f3b68fe9051fd23e296a55355e324350
 		# combine the position and norm
 
 		return self.raw_pcl_with_raw_norm
@@ -96,6 +101,80 @@ class filter_pointcloud_for_path_planner():
 		self.sorted_pcl_with_filtered_norm[line_startpoint_idx[-1]:] = self.sorted_pcl_with_filtered_norm[line_startpoint_idx[-1]:][::-1]
 
 		return self.sorted_pcl_with_filtered_norm
+	
+	def savefile(self, fileType='quat',path):
+		"""
+		Param:
+			fileType: string, 'quat','euler'
+			'quat': save a 7 by N npy file, the first three colomns are position, last four is quat angle
+			'euler': save a 6 by N npy file, the first three colomns are position, last four is quat angle 
+		"""
+		save_quat = np.empty((0,7))
+		save_euler = np.empty((0,6))
+		for i in range(self.sorted_pcl_with_filtered_norm[0]):
+		# negative because it's pointing inward to the liver
+			norm_x = -self.sorted_pcl_with_filtered_norm[i,3]
+			norm_y = -self.sorted_pcl_with_filtered_norm[i,4]
+			norm_z = -self.sorted_pcl_with_filtered_norm[i,5]
+			
+			x_euler, z_euler = self.norm2euler(norm_x,norm_y,norm_z)
+			if fileType == 'euler':
+				save_euler = np.concatenate((save_euler, np.array([[
+								self.sorted_pcl_with_filtered_norm[i,0],
+								self.sorted_pcl_with_filtered_norm[i,1],
+								self.sorted_pcl_with_filtered_norm[i,2],
+								norm_x,
+								norm_y,
+								norm_z
+							]])), axis=0)
+				np.save('path', save_euler)
+			if fileTYpe == 'quat':
+				quat_r = R.from_euler('zxy',[x_euler, 0, z_euler],degrees=False) 
+				save_euler = np.concatenate((save_euler, np.array([[
+								self.sorted_pcl_with_filtered_norm[i,0],
+								self.sorted_pcl_with_filtered_norm[i,1],
+								self.sorted_pcl_with_filtered_norm[i,2],
+								quat_r.as_quat()[0],
+								quat_r.as_quat()[1],
+								quat_r.as_quat()[2],
+								quat_r.as_quat()[3]
+							]])), axis=0)
+				np.save('path', save_quat)
+		
+	
+	def norm2euler(self, x, y, z):
+        x_euler=0
+        z_euler=0
+        length = np.sqrt(x**2+y**2)
+        if((x>0)and(y>0)and(z>0)):
+            x_euler = np.arctan(y/x)
+            z_euler = -np.arctan(z/length)
+        if((x<0)and(y<0)and(z<0)):
+            x_euler = np.pi+np.arctan(-y/-x)
+            z_euler = np.arctan(z/length)
+        
+        if((x<0)and(y>0)and(z<0)):
+            x_euler = np.pi-np.arctan(y/-x)
+            z_euler = np.arctan(z/length)
+        if((x>0)and(y<0)and(z>0)):
+            x_euler = -np.arctan(-y/x)
+            z_euler = -np.arctan(z/length)
+        
+        if((x>0)and(y>0)and(z<0)):
+            x_euler = np.arctan(y/x)
+            z_euler = -np.arctan(z/length)
+        if((x<0)and(y<0)and(z>0)):
+            x_euler = np.pi+np.arctan(-y/-x)
+            z_euler = np.arctan(z/length)
+
+        if((x<0)and(y>0)and(z>0)):
+            x_euler = np.pi/2+np.arctan(-x/y)
+            z_euler = np.arctan(z/length)
+        if((x>0)and(y<0)and(z<0)):
+            x_euler = -np.arctan(-y/x)
+            z_euler = np.arctan(-z/length)
+
+        return x_euler, z_euler
 
 
 if __name__ == "__main__":

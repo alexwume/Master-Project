@@ -1,5 +1,6 @@
 #system
 import rospy
+import argparse
 
 #data processing
 import numpy as np
@@ -43,6 +44,8 @@ class liverGrid:
         self.normal_vectors = PoseArray()
         self.normal_vectors.header = self.header
         
+        
+
 
 
     def convert_array_to_pointcloud2(self):
@@ -78,77 +81,29 @@ class liverGrid:
 
         self.point_nparray  = np.load(path) # N by 3 matrix
         self.point_nparray = np.transpose(self.point_nparray) # 3 by N matrix
-        # self.unitTest()
- 
+        
+        
         for i in range(self.point_nparray.shape[1]):
             normal_vector = Pose()
             normal_vector.position.x = self.point_nparray[0,i]
             normal_vector.position.y = self.point_nparray[1,i]
             normal_vector.position.z = self.point_nparray[2,i]
-            # normal_orientation = euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
-            
-            norm_x = self.point_nparray[3,i]
-            norm_y = self.point_nparray[4,i]
-            norm_z = self.point_nparray[5,i]
-            
-            x_euler, z_euler = self.norm2euler(norm_x,norm_y,norm_z)
-            quat_r = R.from_euler('zxy',[x_euler, 0, z_euler],degrees=False) 
-            
-            normal_vector.orientation.x, normal_vector.orientation.y, normal_vector.orientation.z, normal_vector.orientation.w = quat_r.as_quat()
+
+            normal_vector.orientation.x = self.point_nparray[3,i]
+            normal_vector.orientation.y = self.point_nparray[4,i]
+            normal_vector.orientation.z = self.point_nparray[5,i]
+            normal_vector.orientation.w = self.point_nparray[6,i]
 
             self.normal_vectors.poses.append(normal_vector)
 
         self.point_nparray = self.point_nparray[0:3,:].T
 
-    def unitTest(self):
-        self.point_nparray = np.array([
-            [0,0,0.02,0.02,0.01,0.03],
-            [0,0,0.02,0.02,-0.01,0.03],
-            [0,0,0.02,-0.02,-0.01,0.03],
-            [0,0,0.02,-0.02,0.01,0.03],
-            [0,0,0.02,0.02,0.01,-0.03],
-            [0,0,0.02,0.02,-0.01,-0.03],
-            [0,0,0.02,-0.02,-0.01,-0.03],
-            [0,0,0.02,-0.02,0.01,-0.03],
-        ]).T
-
-    def norm2euler(self, x, y, z):
-        x_euler=0
-        z_euler=0
-        length = np.sqrt(x**2+y**2)
-        if((x>0)and(y>0)and(z>0)):
-            x_euler = np.arctan(y/x)
-            z_euler = -np.arctan(z/length)
-        if((x<0)and(y<0)and(z<0)):
-            x_euler = np.pi+np.arctan(-y/-x)
-            z_euler = np.arctan(z/length)
-        
-        if((x<0)and(y>0)and(z<0)):
-            x_euler = np.pi-np.arctan(y/-x)
-            z_euler = np.arctan(z/length)
-        if((x>0)and(y<0)and(z>0)):
-            x_euler = -np.arctan(-y/x)
-            z_euler = -np.arctan(z/length)
-        
-        if((x>0)and(y>0)and(z<0)):
-            x_euler = np.arctan(y/x)
-            z_euler = -np.arctan(z/length)
-        if((x<0)and(y<0)and(z>0)):
-            x_euler = np.pi+np.arctan(-y/-x)
-            z_euler = np.arctan(z/length)
-
-        if((x<0)and(y>0)and(z>0)):
-            x_euler = np.pi/2+np.arctan(-x/y)
-            z_euler = np.arctan(z/length)
-        if((x>0)and(y<0)and(z<0)):
-            x_euler = -np.arctan(-y/x)
-            z_euler = np.arctan(-z/length)
-
-        return x_euler, z_euler
-
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--path',help='the path to the position&quat npy file')
+    args = parser.parse_args()
 
     liverGrid = liverGrid()
-    a = liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/dense_outward_normals_cleanForPlanning.npy')
+    a = liverGrid.readArrayfromFile(args.path)
     liverGrid.convert_array_to_pointcloud2()
     liverGrid.publish_pointcloud()
