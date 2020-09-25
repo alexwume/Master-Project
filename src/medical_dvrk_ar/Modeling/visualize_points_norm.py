@@ -87,9 +87,9 @@ class liverGrid:
             normal_vector.position.z = self.point_nparray[2,i]
             # normal_orientation = euler_to_quaternion(self.point_nparray[3,:],self.point_nparray[4,:],self.point_nparray[5,:])
             
-            norm_x =-self.point_nparray[3,i]
-            norm_y =-self.point_nparray[4,i]
-            norm_z =-self.point_nparray[5,i]
+            norm_x = self.point_nparray[3,i]
+            norm_y = self.point_nparray[4,i]
+            norm_z = self.point_nparray[5,i]
             
             x_euler, z_euler = self.norm2euler(norm_x,norm_y,norm_z)
             quat_r = R.from_euler('zxy',[x_euler, 0, z_euler],degrees=False) 
@@ -100,7 +100,7 @@ class liverGrid:
 
         self.point_nparray = self.point_nparray[0:3,:].T
 
-    def unitTest():
+    def unitTest(self):
         self.point_nparray = np.array([
             [0,0,0.02,0.02,0.01,0.03],
             [0,0,0.02,0.02,-0.01,0.03],
@@ -111,6 +111,7 @@ class liverGrid:
             [0,0,0.02,-0.02,-0.01,-0.03],
             [0,0,0.02,-0.02,0.01,-0.03],
         ]).T
+
     def norm2euler(self, x, y, z):
         x_euler=0
         z_euler=0
@@ -148,6 +149,6 @@ class liverGrid:
 if __name__ == "__main__":
 
     liverGrid = liverGrid()
-    a = liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/normals_sparse_outward.npy')
+    a = liverGrid.readArrayfromFile('/home/cora/dvrk/src/Medical-DVRK-AR/data/dense_outward_normals_cleanForPlanning.npy')
     liverGrid.convert_array_to_pointcloud2()
     liverGrid.publish_pointcloud()
