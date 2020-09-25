@@ -98,9 +98,9 @@ class filter_pointcloud_for_path_planner():
 if __name__ == "__main__":
 	raw_data_path = "../../../data/stl2.ply"
 	# parameter to adjust
-	max_angle = 80  # change  the param within [0,90)
+	max_angle = 60  # change  the param within [0,90)
 	file_path = "D:/CMU2020FALL/HapticSurgery/Medical-DVRK-AR/data/"
-	sorted_file_name = "dense_outward_normals_cleanForPlanning.npy"
+	sorted_file_name = "dense_outward_normals_cleanForPlanning_60.npy"
 
 	my_filter = filter_pointcloud_for_path_planner(raw_data_path)
 	my_filter.downsample_raw_pcl_get_normal_vector()
