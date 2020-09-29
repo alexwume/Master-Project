@@ -1,37 +1,3 @@
-
-Skip to content
-Pulls
-Issues
-Marketplace
-Explore
-@KoalalikeTree
-biorobotics /
-Medical-DVRK-AR
-
-21
-0
-
-    1
-
-Code
-Issues
-Pull requests
-Actions
-Projects
-Wiki
-Insights
-
-More
-Medical-DVRK-AR/src/medical_dvrk_ar/Modeling/pointcloud_sort_filter.py /
-@KoalalikeTree
-KoalalikeTree no message
-Latest commit d4f2fd5 4 days ago
-History
-3 contributors
-@KoalalikeTree
-@koooooalaliketree
-@ChangShiRaine
-191 lines (160 sloc) 7.87 KB
 """
 Data preprocessing to Get the n by 6 key points pose for path planning,
 Every row will contain [x,y,z,x',y',z'] where x' y' z' is the normal vector.
@@ -40,6 +6,7 @@ All rows will be in the order for the robot to execute.
 
 import numpy as np
 import open3d as o3d
+from scipy.spatial.transform import Rotation as R
 
 class filter_pointcloud_for_path_planner():
 	def __init__(self, path_to_raw_data):
@@ -83,11 +50,12 @@ class filter_pointcloud_for_path_planner():
 		normals_outward = np.asarray(downpcd.normals)
 		# get the np array version of the points
 		position = np.asarray(downpcd.points)
-		# np.save('xyz_for_stiffness_est.npy', position)
-		# this is for the robot frame, the z will shift by 0.2
-		position[2,:] -=0.2
-		# combine the position and norm
 
+		# this is for the robot frame, the z will shift by 0.2
+		position[:,2] -= 0.2
+		# np.save('xyz_for_stiffness_est.npy', position)
+		# combine the position and norm
+		self.raw_pcl_with_raw_norm = np.concatenate((position, normals_outward),axis=1)
 		return self.raw_pcl_with_raw_norm
 
 
@@ -133,47 +101,47 @@ class filter_pointcloud_for_path_planner():
 
 		return self.sorted_pcl_with_filtered_norm
 	
-	# def savefile(self, fileType='quat',path):
-	# 	"""
-	# 	Param:
-	# 		fileType: string, 'quat','euler'
-	# 		'quat': save a 7 by N npy file, the first three colomns are position, last four is quat angle
-	# 		'euler': save a 6 by N npy file, the first three colomns are position, last four is quat angle
-	# 	"""
-	# 	save_quat = np.empty((0,7))
-	# 	save_euler = np.empty((0,6))
-	# 	for i in range(self.sorted_pcl_with_filtered_norm[0]):
-	# 	# negative because it's pointing inward to the liver
-	# 		norm_x = -self.sorted_pcl_with_filtered_norm[i,3]
-	# 		norm_y = -self.sorted_pcl_with_filtered_norm[i,4]
-	# 		norm_z = -self.sorted_pcl_with_filtered_norm[i,5]
-	#
-	# 		x_euler, z_euler = self.norm2euler(norm_x,norm_y,norm_z)
-	# 		if fileType == 'euler':
-	# 			save_euler = np.concatenate((save_euler, np.array([[
-	# 							self.sorted_pcl_with_filtered_norm[i,0],
-	# 							self.sorted_pcl_with_filtered_norm[i,1],
-	# 							self.sorted_pcl_with_filtered_norm[i,2],
-	# 							norm_x,
-	# 							norm_y,
-	# 							norm_z
-	# 						]])), axis=0)
-	# 			np.save('path', save_euler)
-	# 		if fileType == 'quat':
-	# 			quat_r = R.from_euler('zxy',[x_euler, 0, z_euler],degrees=False)
-	# 			save_euler = np.concatenate((save_euler, np.array([[
-	# 							self.sorted_pcl_with_filtered_norm[i,0],
-	# 							self.sorted_pcl_with_filtered_norm[i,1],
-	# 							self.sorted_pcl_with_filtered_norm[i,2],
-	# 							quat_r.as_quat()[0],
-	# 							quat_r.as_quat()[1],
-	# 							quat_r.as_quat()[2],
-	# 							quat_r.as_quat()[3]
-	# 						]])), axis=0)
-	# 			np.save('path', save_quat)
+	def savefile(self, path, fileType='quat',):
+		"""
+		Param:
+			fileType: string, 'quat','euler'
+			'quat': save a 7 by N npy file, the first three colomns are position, last four is quat angle
+			'euler': save a 6 by N npy file, the first three colomns are position, last four is quat angle
+		"""
+		save_quat = np.empty((0,7))
+		save_euler = np.empty((0,6))
+		for i in range(self.sorted_pcl_with_filtered_norm[0]):
+		# negative because it's pointing inward to the liver
+			norm_x = -self.sorted_pcl_with_filtered_norm[i,3]
+			norm_y = -self.sorted_pcl_with_filtered_norm[i,4]
+			norm_z = -self.sorted_pcl_with_filtered_norm[i,5]
+
+			x_euler, y_euler, z_euler = self.norm2euler_xyz(norm_x, norm_y, norm_z)
+			if fileType == 'euler':
+				save_euler = np.concatenate((save_euler, np.array([[
+								self.sorted_pcl_with_filtered_norm[i,0],
+								self.sorted_pcl_with_filtered_norm[i,1],
+								self.sorted_pcl_with_filtered_norm[i,2],
+								x_euler,
+								y_euler,
+								z_euler
+							]])), axis=0)
+				np.save(path, save_euler)
+			if fileType == 'quat':
+				quat_r = R.from_euler('xyz',[x_euler, y_euler, z_euler],degrees=False)
+				save_euler = np.concatenate((save_euler, np.array([[
+								self.sorted_pcl_with_filtered_norm[i,0],
+								self.sorted_pcl_with_filtered_norm[i,1],
+								self.sorted_pcl_with_filtered_norm[i,2],
+								quat_r.as_quat()[0],
+								quat_r.as_quat()[1],
+								quat_r.as_quat()[2],
+								quat_r.as_quat()[3]
+							]])), axis=0)
+				np.save(path, save_quat)
 		
 	
-	def norm2euler(self, x, y, z):
+	def norm2euler_zyx(self, x, y, z):
 		x_euler = 0
 		z_euler = 0
 		length = np.sqrt(x ** 2 + y ** 2)
@@ -205,15 +173,51 @@ class filter_pointcloud_for_path_planner():
 			x_euler = -np.arctan(-y / x)
 			z_euler = np.arctan(-z / length)
 
-		return x_euler, z_euler
+		return x_euler,0, z_euler
+
+	def norm2euler_xyz(self, x, y, z):
+		"""deprecated"""
+		x_euler = 0
+		y_euler = 0
+		length = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+		length_cos = np.sqrt(y ** 2 + z ** 2)
+		if ((x > 0) and (y > 0) and (z > 0)):
+			x_euler = -np.arctan(y / z)
+			y_euler = np.arccos(length_cos / length)
+		if ((x < 0) and (y < 0) and (z < 0)):
+			x_euler = np.pi + np.arctan(y / -z)
+			y_euler = np.arccos(length_cos / length)
+
+		if ((x > 0) and (y < 0) and (z > 0)):
+			x_euler = np.arctan(-y / z)
+			y_euler = np.arccos(length_cos / length)
+		if ((x < 0) and (y > 0) and (z < 0)):
+			x_euler = np.pi + np.arctan(y / -z)
+			y_euler = np.arccos(length_cos / length)
+
+		if ((x < 0) and (y < 0) and (z > 0)):
+			x_euler = np.arctan(-y / z)
+			y_euler = -np.arccos(length_cos / length)
+		if ((x > 0) and (y > 0) and (z < 0)):
+			x_euler = np.pi + np.arctan(y / -z)
+			y_euler = -np.arccos(length_cos / length)
+
+		if ((x < 0) and (y > 0) and (z > 0)):
+			x_euler = -np.arctan(y / z)
+			y_euler = -np.arccos(length_cos / length)
+		if ((x > 0) and (y < 0) and (z < 0)):
+			x_euler = np.pi - np.arctan(-y / -z)
+			y_euler = -np.arccos(length_cos / length)
+
+		return x_euler, y_euler, 0
 
 
 if __name__ == "__main__":
-	raw_data_path = "../../../data/stl2.ply"
+	raw_data_path = "D:/CMU2020FALL/HapticSurgery/Medical-DVRK-AR/data/stl2.ply"
 	# parameter to adjust
-	max_angle = 60  # change  the param within [0,90)
+	max_angle = 80  # change  the param within [0,90)
 	file_path = "D:/CMU2020FALL/HapticSurgery/Medical-DVRK-AR/data/"
-	sorted_file_name = "dense_outward_normals_cleanForPlanning_60.npy"
+	sorted_file_name = "80degree_norm.npy"
 
 	my_filter = filter_pointcloud_for_path_planner(raw_data_path)
 	my_filter.downsample_raw_pcl_get_normal_vector()
