@@ -24,18 +24,22 @@ def main():
 	print(liver_points.shape)
 	all_points = []
 
+	i = 0
 	for row in liver_points:
-		# rotation_mat = PyKDL.Rotation.RPY(row[3], row[4], row[5])
-		rospy.init_node('controller', anonymous=True)
-		robot = psm('PSM1')
-		rate = rospy.Rate(100) # 10hz
-		robot.home()
+		if i<10 :
+			# rotation_mat = PyKDL.Rotation.RPY(row[3], row[4], row[5])
+			rospy.init_node('controller', anonymous=True)
+			robot = psm('PSM1')
+			rate = rospy.Rate(100) # 10hz
+			robot.home()
 
-		rotation_mat = PyKDL.Rotation.Quaternion(row[3], row[4], row[5], row[6])
+			rotation_mat = PyKDL.Rotation.Quaternion(row[3], row[4], row[5], row[6])
+			rotation_mat = PyKDL.Rotation.Quaternion(0, 0, 0, -1)
 
-		vec = PyKDL.Vector(row[0],row[1],row[2])
-		each_frame = PyKDL.Frame(rotation_mat, vec)
-		all_points.append(each_frame)
+			vec = PyKDL.Vector(row[0],row[1],row[2])
+			each_frame = PyKDL.Frame(rotation_mat, vec)
+			all_points.append(each_frame)
+			i+=1
 
 	arm_planner(all_points)
 	while not rospy.is_shutdown():

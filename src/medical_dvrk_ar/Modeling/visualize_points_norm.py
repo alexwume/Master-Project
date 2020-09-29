@@ -46,8 +46,6 @@ class liverGrid:
         
         
 
-
-
     def convert_array_to_pointcloud2(self):
         """
         param: 3 by N array
@@ -82,21 +80,141 @@ class liverGrid:
         self.point_nparray  = np.load(path) # N by 3 matrix
         self.point_nparray = np.transpose(self.point_nparray) # 3 by N matrix
         
-        
+        # self.point_nparray = np.array([
+        #     [0,0,0,3,1,10],
+        #     [0,0,0,-3,-1,-10],
+        #     [0,0,0,3,-1,10],
+        #     [0,0,0,-3,1,-10],
+        #     [0,0,0,-3,-1,10],
+        #     [0,0,0,3,1,-10],
+        #     [0,0,0,-3,1,10],
+        #     [0,0,0,3,-1,-10],
+        # ]).T
         for i in range(self.point_nparray.shape[1]):
             normal_vector = Pose()
             normal_vector.position.x = self.point_nparray[0,i]
             normal_vector.position.y = self.point_nparray[1,i]
             normal_vector.position.z = self.point_nparray[2,i]
+            normal_vector.position.x = self.point_nparray[0,i]
+            normal_vector.position.y = self.point_nparray[1,i]
+            normal_vector.position.z = self.point_nparray[2,i]
+            
+            norm_x=-self.point_nparray[3,i]
+            norm_y=-self.point_nparray[4,i]
+            norm_z=-self.point_nparray[5,i]
 
-            normal_vector.orientation.x = self.point_nparray[3,i]
-            normal_vector.orientation.y = self.point_nparray[4,i]
-            normal_vector.orientation.z = self.point_nparray[5,i]
-            normal_vector.orientation.w = self.point_nparray[6,i]
+            x_euler,y_euler,z_euler = self.norm2euler_xyz(norm_x,norm_y,norm_z)
+            r_euler = R.from_euler('xyz',[x_euler,y_euler,z_euler],degrees=False)
+            r_quat = r_euler.as_quat()
+
+            normal_vector.orientation.x = r_quat[0]
+            normal_vector.orientation.y = r_quat[1]
+            normal_vector.orientation.z = r_quat[2]
+            normal_vector.orientation.w = r_quat[3]
 
             self.normal_vectors.poses.append(normal_vector)
 
+        # self.save_norm_all_down() 
         self.point_nparray = self.point_nparray[0:3,:].T
+    
+    def save_norm_all_down(self):
+        save_numpy = np.empty((0,7))
+        
+        for i in range(self.point_nparray.shape[1]):
+            normal_vector = Pose()
+
+            normal_vector.position.x = self.point_nparray[0,i]
+            normal_vector.position.y = self.point_nparray[1,i]
+            normal_vector.position.z = self.point_nparray[2,i]
+            
+            x_euler,y_euler,z_euler = math.pi,0,0
+            r_euler = R.from_euler('xyz',[x_euler,y_euler,z_euler],degrees=False)
+            r_quat = r_euler.as_quat()
+
+            save_numpy_row = np.zeros((1,7))
+
+            save_numpy_row[0,0] = self.point_nparray[0,i]
+            save_numpy_row[0,1] = self.point_nparray[1,i]
+            save_numpy_row[0,2] = self.point_nparray[2,i]
+            save_numpy_row[0,3] = r_quat[0]
+            save_numpy_row[0,4] = r_quat[1]
+            save_numpy_row[0,5] = r_quat[2]
+            save_numpy_row[0,6] = r_quat[3]        
+
+            print(save_numpy.shape, save_numpy_row.shape)
+            save_numpy = np.concatenate((save_numpy, save_numpy_row),axis=0)
+
+        np.save('../../../data/Alex_norm_all_downward.npy',save_numpy)
+        print(save_numpy.shape) 
+
+    def norm2euler_xyz(self,x,y,z):
+        x_euler=0
+        y_euler=0
+        length = np.sqrt(x**2+y**2+z**2)
+        length_cos = np.sqrt(y**2+z**2)
+        if((x>0)and(y>0)and(z>0)):
+            x_euler = -np.arctan(y/z)
+            y_euler = np.arccos(length_cos/length)
+        if((x<0)and(y<0)and(z<0)):
+            x_euler = np.pi + np.arctan(y/-z)
+            y_euler = np.arccos(length_cos/length)
+
+        if((x>0)and(y<0)and(z>0)):
+            x_euler = np.arctan(-y/z)
+            y_euler = np.arccos(length_cos/length)
+        if((x<0)and(y>0)and(z<0)):
+            x_euler = np.pi+np.arctan(y/-z)
+            y_euler = np.arccos(length_cos/length)
+
+        if((x<0)and(y<0)and(z>0)):
+            x_euler = np.arctan(-y/z)
+            y_euler = -np.arccos(length_cos/length)
+        if((x>0)and(y>0)and(z<0)):
+            x_euler = np.pi+np.arctan(y/-z)
+            y_euler = -np.arccos(length_cos/length)
+
+        if((x<0)and(y>0)and(z>0)):
+            x_euler = -np.arctan(y/z)
+            y_euler = -np.arccos(length_cos/length)
+        if((x>0)and(y<0)and(z<0)):
+            x_euler = np.pi-np.arctan(-y/-z)
+            y_euler = -np.arccos(length_cos/length)
+
+        return x_euler,y_euler,0
+
+    def norm2euler(self, x, y, z):
+        x_euler=0
+        z_euler=0
+        length = np.sqrt(x**2+y**2)
+        if((x>0)and(y>0)and(z>0)):
+            x_euler = np.arctan(y/x)
+            z_euler = -np.arctan(z/length)
+        # if((x<0)and(y<0)and(z<0)):
+        #     x_euler = np.pi+np.arctan(-y/-x)
+        #     z_euler = np.arctan(z/length)
+        
+        # if((x<0)and(y>0)and(z<0)):
+        #     x_euler = np.pi-np.arctan(y/-x)
+        #     z_euler = np.arctan(z/length)
+        # if((x>0)and(y<0)and(z>0)):
+        #     x_euler = -np.arctan(-y/x)
+        #     z_euler = -np.arctan(z/length)
+        
+        # if((x>0)and(y>0)and(z<0)):
+        #     x_euler = np.arctan(y/x)
+        #     z_euler = -np.arctan(z/length)
+        # if((x<0)and(y<0)and(z>0)):
+        #     x_euler = np.pi+np.arctan(-y/-x)
+        #     z_euler = np.arctan(z/length)
+
+        # if((x<0)and(y>0)and(z>0)):
+        #     x_euler = np.pi/2+np.arctan(-x/y)
+        #     z_euler = np.arctan(z/length)
+        # if((x>0)and(y<0)and(z<0)):
+        #     x_euler = -np.arctan(-y/x)
+        #     z_euler = np.arctan(-z/length)
+
+        return x_euler, z_euler
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process some integers.')

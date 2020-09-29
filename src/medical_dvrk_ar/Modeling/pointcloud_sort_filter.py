@@ -68,7 +68,7 @@ class filter_pointcloud_for_path_planner():
 		print("Remaining points:",self.raw_pcl_with_filtered_norm.shape[0])
 
 
-	def sorted_poinst_with_xy_position(self):
+	def sorted_points_with_xy_position(self):
 		"""
 		this function turn the disordered point cloud into a sorted one
 		which can directly be fed into the path planner in dvrk
@@ -181,7 +181,7 @@ if __name__ == "__main__":
 	my_filter = filter_pointcloud_for_path_planner(raw_data_path)
 	my_filter.downsample_raw_pcl_get_normal_vector()
 	my_filter.filter_vector_with_angle_threshold(max_angle)
-	sorted_pcl_with_filtered_norm = my_filter.sorted_poinst_with_xy_position()
+	sorted_pcl_with_filtered_norm = my_filter.sorted_points_with_xy_position()
 
 	np.save(file_path+sorted_file_name, sorted_pcl_with_filtered_norm)
 
