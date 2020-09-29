@@ -101,7 +101,7 @@ class filter_pointcloud_for_path_planner():
 
 		return self.sorted_pcl_with_filtered_norm
 	
-	def savefile(self, path, fileType='quat',):
+	def savefile(self, path):
 		"""
 		Param:
 			fileType: string, 'quat','euler'
@@ -109,36 +109,26 @@ class filter_pointcloud_for_path_planner():
 			'euler': save a 6 by N npy file, the first three colomns are position, last four is quat angle
 		"""
 		save_quat = np.empty((0,7))
-		save_euler = np.empty((0,6))
-		for i in range(self.sorted_pcl_with_filtered_norm[0]):
+		for i in range(self.sorted_pcl_with_filtered_norm.shape[0]):
 		# negative because it's pointing inward to the liver
 			norm_x = -self.sorted_pcl_with_filtered_norm[i,3]
 			norm_y = -self.sorted_pcl_with_filtered_norm[i,4]
 			norm_z = -self.sorted_pcl_with_filtered_norm[i,5]
 
 			x_euler, y_euler, z_euler = self.norm2euler_xyz(norm_x, norm_y, norm_z)
-			if fileType == 'euler':
-				save_euler = np.concatenate((save_euler, np.array([[
-								self.sorted_pcl_with_filtered_norm[i,0],
-								self.sorted_pcl_with_filtered_norm[i,1],
-								self.sorted_pcl_with_filtered_norm[i,2],
-								x_euler,
-								y_euler,
-								z_euler
-							]])), axis=0)
-				np.save(path, save_euler)
-			if fileType == 'quat':
-				quat_r = R.from_euler('xyz',[x_euler, y_euler, z_euler],degrees=False)
-				save_euler = np.concatenate((save_euler, np.array([[
-								self.sorted_pcl_with_filtered_norm[i,0],
-								self.sorted_pcl_with_filtered_norm[i,1],
-								self.sorted_pcl_with_filtered_norm[i,2],
-								quat_r.as_quat()[0],
-								quat_r.as_quat()[1],
-								quat_r.as_quat()[2],
-								quat_r.as_quat()[3]
-							]])), axis=0)
-				np.save(path, save_quat)
+			quat_r = R.from_euler('xyz',[x_euler, y_euler, z_euler],degrees=False)
+			row = np.zeros((1,7))
+			row[0,0] = self.sorted_pcl_with_filtered_norm[i,0]
+			row[0,1] = self.sorted_pcl_with_filtered_norm[i,1]
+			row[0,2] = self.sorted_pcl_with_filtered_norm[i,2]
+			row[0,3] = quat_r.as_quat()[0]
+			row[0,4] = quat_r.as_quat()[1]
+			row[0,5] = quat_r.as_quat()[2]
+			row[0,6] = quat_r.as_quat()[3]
+			save_quat = np.concatenate((save_quat, row), axis=0)
+
+		print(save_quat.shape)
+		np.save(path, save_quat)
 		
 	
 	def norm2euler_zyx(self, x, y, z):
@@ -223,6 +213,5 @@ if __name__ == "__main__":
 	my_filter.downsample_raw_pcl_get_normal_vector()
 	my_filter.filter_vector_with_angle_threshold(max_angle)
 	sorted_pcl_with_filtered_norm = my_filter.sorted_poinst_with_xy_position()
-
-	np.save(file_path+sorted_file_name, sorted_pcl_with_filtered_norm)
+	my_filter.savefile(file_path+sorted_file_name)
 
